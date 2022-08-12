@@ -27,7 +27,7 @@ func (device *Device) Write(position int64, bytes []byte) {
 	device.ImageFile.Sync()
 }
 
-func Make(fileName string, bytes int64) (*Device, error) {
+func New(fileName string, bytes int64) (*Device, error) {
 	_, err := os.Stat(fileName)
 	if err == nil {
 		return nil, errors.New("specified image file already exists")
