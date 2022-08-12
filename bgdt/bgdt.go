@@ -2,6 +2,7 @@ package bgdt
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"math"
 
@@ -27,17 +28,17 @@ type Bgdt struct {
 
 func New(
 	bgNumCopy int,
-	targetSuperblock *superblock.Superblock,
+	superblockObject *superblock.Superblock,
 	filesystemDevice *device.Device,
 ) (*Bgdt, error) {
 	bgdt := &Bgdt{}
-	bgdt.StartPos = (bgNumCopy*targetSuperblock.NumBlocksPerGroup + targetSuperblock.FirstBlockId + 1) * targetSuperblock.BlockSize
-	bgdt.NumBgdtBlocks = int(math.Ceil(float64(targetSuperblock.NumBlockGroups*32) / float64(targetSuperblock.BlockSize)))
-	bgdt.InodeTableBlocks = int(math.Ceil(float64(targetSuperblock.NumInodesPerGroup*targetSuperblock.InodeSize) / float64(targetSuperblock.BlockSize)))
+	bgdt.StartPos = (bgNumCopy*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId + 1) * superblockObject.BlockSize
+	bgdt.NumBgdtBlocks = int(math.Ceil(float64(superblockObject.NumBlockGroups*32) / float64(superblockObject.BlockSize)))
+	bgdt.InodeTableBlocks = int(math.Ceil(float64(superblockObject.NumInodesPerGroup*superblockObject.InodeSize) / float64(superblockObject.BlockSize)))
 
 	bgdtBytes := ""
-	for bgroupNum := 0; bgroupNum < targetSuperblock.NumBlockGroups; bgroupNum++ {
-		bgroupStartBid := bgroupNum*targetSuperblock.NumBlocksPerGroup + targetSuperblock.FirstBlockId
+	for bgroupNum := 0; bgroupNum < superblockObject.NumBlockGroups; bgroupNum++ {
+		bgroupStartBid := bgroupNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId
 		bgdt.BlockBitmapLocation = bgroupStartBid
 		bgdt.InodeBitmapLocation = bgroupStartBid + 1
 		bgdt.InodeTableLocation = bgroupStartBid + 2
@@ -45,7 +46,7 @@ func New(
 
 		bgdt.NumUsedBlocks = 2 + bgdt.InodeTableBlocks
 		in := false
-		for _, groupId := range targetSuperblock.CopyBlockGroupIds {
+		for _, groupId := range superblockObject.CopyBlockGroupIds {
 			if bgroupNum == groupId {
 				in = true
 			}
@@ -59,14 +60,14 @@ func New(
 
 		bgdt.NumUsedInodes = 0
 		if bgroupNum == 0 {
-			bgdt.NumUsedInodes += (targetSuperblock.FirstInodeIndex - 1)
+			bgdt.NumUsedInodes += (superblockObject.FirstInodeIndex - 1)
 		}
-		bgdt.NumFreeInodes = targetSuperblock.NumInodesPerGroup - bgdt.NumUsedInodes
+		bgdt.NumFreeInodes = superblockObject.NumInodesPerGroup - bgdt.NumUsedInodes
 
-		if bgroupNum != targetSuperblock.NumBlockGroups-1 {
-			bgdt.NumTotalBlocksInGroup = targetSuperblock.NumBlocksPerGroup
+		if bgroupNum != superblockObject.NumBlockGroups-1 {
+			bgdt.NumTotalBlocksInGroup = superblockObject.NumBlocksPerGroup
 		} else {
-			bgdt.NumTotalBlocksInGroup = targetSuperblock.NumBlocks - bgroupStartBid
+			bgdt.NumTotalBlocksInGroup = superblockObject.NumBlocks - bgroupStartBid
 		}
 		bgdt.NumFreeBlocks = bgdt.NumTotalBlocksInGroup - bgdt.NumUsedBlocks
 
@@ -75,12 +76,8 @@ func New(
 		}
 
 		if bgNumCopy == 0 {
-			format := []string{}
-			for i := 0; i < targetSuperblock.BlockSize; i++ {
-				format = append(format, "B")
-			}
 			blockBitmap := []int{}
-			for i := 0; i < targetSuperblock.BlockSize; i++ {
+			for i := 0; i < superblockObject.BlockSize; i++ {
 				blockBitmap = append(blockBitmap, 0)
 			}
 			bitmapIndex := 0
@@ -92,21 +89,16 @@ func New(
 				}
 			}
 			padBitIndex := bgdt.NumTotalBlocksInGroup
-			for padBitIndex < targetSuperblock.BlockSize {
+			for padBitIndex < superblockObject.BlockSize {
 				blockBitmap[padBitIndex>>8] |= (1 << (padBitIndex & 0x07))
 				padBitIndex += 1
 			}
-			convertedBlockBitmap := []interface{}{}
+			blockBitmapBytes := make([]byte, superblockObject.BlockSize)
 			for _, item := range blockBitmap {
-				convertedBlockBitmap = append(convertedBlockBitmap, item)
-			}
-			bp := new(binary_pack.BinaryPack)
-			blockBitmapBytes, err := bp.Pack(format, convertedBlockBitmap)
-			if err != nil {
-				return bgdt, errors.New("unable to pack bytes: " + err.Error())
+				binary.PutVarint(blockBitmapBytes, int64(item))
 			}
 			filesystemDevice.Write(
-				int64(bgdt.BlockBitmapLocation*targetSuperblock.BlockSize),
+				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
 				blockBitmapBytes,
 			)
 		}

@@ -21,7 +21,7 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	}
 
 	currentTime := time.Now().UnixNano()
-	volumeId := uuid.New().String()
+	volumeIdBytes := [16]byte(uuid.New())
 	superblockObject, err := superblock.New(
 		1024,
 		filesystemDevice,
@@ -29,7 +29,7 @@ func Make(fileName string, blockSize, numBlocks int) error {
 		blockSize,
 		numBlocks,
 		currentTime,
-		volumeId,
+		volumeIdBytes,
 	)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	if len(superblockObject.CopyBlockGroupIds) > 0 {
 		for _, bgNum := range superblockObject.CopyBlockGroupIds[1:] {
 			offset := int64((bgNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId) * blockSize)
-			shadowSb, err := superblock.New(offset, filesystemDevice, bgNum, blockSize, numBlocks, currentTime, volumeId)
+			shadowSb, err := superblock.New(offset, filesystemDevice, bgNum, blockSize, numBlocks, currentTime, volumeIdBytes)
 			if err != nil {
 				return err
 			}

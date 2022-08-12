@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/ErrorNoInternet/mkfs.ext2/device"
@@ -49,7 +50,7 @@ type Superblock struct {
 	TimeBetweenCheck           int64
 	LastMountPath              string
 	VolName                    string
-	VolumeId                   string
+	VolumeId                   [16]byte
 	CopyBlockGroupIds          []int
 }
 
@@ -60,9 +61,15 @@ func New(
 	blockSize int,
 	numBlocks int,
 	currentTime int64,
-	volumeId string,
+	volumeId [16]byte,
 ) (*Superblock, error) {
-	superblock := &Superblock{}
+	superblock := &Superblock{
+		BgNum:     bgNum,
+		BlockSize: blockSize,
+		NumBlocks: numBlocks,
+		VolumeId:  volumeId,
+	}
+	fmt.Println(volumeId)
 
 	superblock.FirstInodeIndex = 11
 	superblock.InodeSize = 128
@@ -70,6 +77,7 @@ func New(
 	superblock.NumResBlocks = int(float64(superblock.NumBlocks) * 0.05)
 	superblock.NumBlocksPerGroup = superblock.BlockSize * 8
 	superblock.NumBlockGroups = int(math.Ceil(float64(superblock.NumBlocks) / float64(superblock.NumBlocksPerGroup)))
+	fmt.Println(superblock.NumBlockGroups)
 
 	superblock.FirstBlockId = 1
 	if superblock.BlockSize > 1024 {
@@ -99,6 +107,7 @@ func New(
 	superblock.BgdtBlocks = int(math.Ceil(float64(superblock.NumBlockGroups*32) / float64(superblock.BlockSize)))
 	superblock.InodeTableBlocks = int(math.Ceil(float64(superblock.NumInodesPerGroup*superblock.InodeSize) / float64(superblock.BlockSize)))
 	superblock.NumFreeBlocks = (superblock.NumBlocks - superblock.FirstBlockId - superblock.InodeTableBlocks*superblock.NumBlockGroups - 2*superblock.NumBlockGroups - (1+superblock.BgdtBlocks)*(len(superblock.CopyBlockGroupIds)+1))
+	fmt.Println(superblock.NumFreeBlocks)
 
 	superblock.LastBgId = superblock.NumBlockGroups - 1
 	overhead := 2 + superblock.InodeTableBlocks
@@ -166,7 +175,7 @@ func New(
 		superblock.NumInodesPerGroup, int(superblock.TimeLastMount), int(superblock.TimeLastWrite), superblock.NumMountsSinceCheck, superblock.NumMountsMax,
 		superblock.MagicNum, superblock.State, superblock.ErrorAction, superblock.RevMinor, int(superblock.TimeLastCheck), int(superblock.TimeBetweenCheck), superblock.CreatorOs,
 		superblock.RevLevel, superblock.DefResUid, superblock.DefResGid, superblock.FirstInodeIndex, superblock.InodeSize, superblock.BgNum, superblock.FeaturesCompatible,
-		superblock.FeaturesIncompatible, superblock.FeaturesReadOnlyCompatible, superblock.VolumeId, superblock.VolName, superblock.LastMountPath}
+		superblock.FeaturesIncompatible, superblock.FeaturesReadOnlyCompatible, string(superblock.VolumeId[:]), superblock.VolName, superblock.LastMountPath}
 	bp := new(binary_pack.BinaryPack)
 	sbBytes, err := bp.Pack(format, values)
 	if err != nil {
