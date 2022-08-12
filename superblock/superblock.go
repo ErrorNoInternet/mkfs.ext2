@@ -69,7 +69,6 @@ func New(
 		NumBlocks: numBlocks,
 		VolumeId:  volumeId,
 	}
-	fmt.Println(volumeId)
 
 	superblock.FirstInodeIndex = 11
 	superblock.InodeSize = 128
@@ -108,7 +107,7 @@ func New(
 	superblock.BgdtBlocks = int(math.Ceil(float64(superblock.NumBlockGroups*32) / float64(superblock.BlockSize)))
 	superblock.InodeTableBlocks = int(math.Ceil(float64(superblock.NumInodesPerGroup*superblock.InodeSize) / float64(superblock.BlockSize)))
 	superblock.NumFreeBlocks = (superblock.NumBlocks - superblock.FirstBlockId - superblock.InodeTableBlocks*superblock.NumBlockGroups - 2*superblock.NumBlockGroups - (1+superblock.BgdtBlocks)*(len(superblock.CopyBlockGroupIds)+1))
-	fmt.Println(superblock.NumFreeBlocks)
+	fmt.Println("a", superblock.BgdtBlocks, superblock.InodeTableBlocks, superblock.NumFreeBlocks)
 
 	superblock.LastBgId = superblock.NumBlockGroups - 1
 	overhead := 2 + superblock.InodeTableBlocks
@@ -123,15 +122,18 @@ func New(
 	}
 	if overhead > superblock.NumBlocks-(superblock.LastBgId*superblock.NumBlocksPerGroup+superblock.FirstBlockId) {
 		if targetIndex != -1 {
+			fmt.Println(len(superblock.CopyBlockGroupIds))
 			superblock.CopyBlockGroupIds = append(
 				superblock.CopyBlockGroupIds[:targetIndex],
 				superblock.CopyBlockGroupIds[targetIndex+1:]...,
 			)
+			fmt.Println(len(superblock.CopyBlockGroupIds))
 		}
 		superblock.NumBlockGroups -= 1
 		superblock.NumBlocks = superblock.NumBlockGroups * superblock.NumBlocksPerGroup
 		superblock.BgdtBlocks = int(math.Ceil(float64(superblock.NumBlockGroups*32) / float64(superblock.BlockSize)))
 		superblock.NumFreeBlocks = (superblock.NumBlocks - superblock.FirstBlockId - superblock.InodeTableBlocks*superblock.NumBlockGroups - 2*superblock.NumBlockGroups - (1+superblock.BgdtBlocks)*(len(superblock.CopyBlockGroupIds)+1))
+		fmt.Println("FREE", superblock.NumFreeBlocks)
 	}
 	if superblock.NumFreeBlocks < 10 {
 		return superblock, errors.New("not enough blocks specified")
@@ -179,11 +181,13 @@ func New(
 		superblock.FeaturesIncompatible, superblock.FeaturesReadOnlyCompatible, string(superblock.VolumeId[:]), superblock.VolName, superblock.LastMountPath}
 	bp := new(binary_pack.BinaryPack)
 	sbBytes, err := bp.Pack(format, values)
-	fmt.Println(string(sbBytes))
 	if err != nil {
 		return superblock, errors.New("unable to pack bytes: " + err.Error())
 	}
-	emptyBytes := make([]byte, 824)
+	emptyBytes := []byte("")
+	for i := 0; i < 824; i++ {
+		emptyBytes = binary.AppendVarint(emptyBytes, 0)
+	}
 	newBytes := bytes.Join([][]byte{sbBytes, emptyBytes}, []byte(""))
 	filesystemDevice.Write(byteOffset, newBytes)
 	return superblock, nil

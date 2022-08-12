@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/ErrorNoInternet/mkfs.ext2/device"
@@ -31,12 +32,15 @@ func New(
 	superblockObject *superblock.Superblock,
 	filesystemDevice *device.Device,
 ) (*Bgdt, error) {
+	fmt.Println("BGDT START")
+
 	bgdt := &Bgdt{}
 	bgdt.StartPos = (bgNumCopy*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId + 1) * superblockObject.BlockSize
 	bgdt.NumBgdtBlocks = int(math.Ceil(float64(superblockObject.NumBlockGroups*32) / float64(superblockObject.BlockSize)))
 	bgdt.InodeTableBlocks = int(math.Ceil(float64(superblockObject.NumInodesPerGroup*superblockObject.InodeSize) / float64(superblockObject.BlockSize)))
 
-	bgdtBytes := ""
+	bgdtBytes := []byte("")
+	fmt.Println("superBlockGroups", superblockObject.NumBlockGroups)
 	for bgroupNum := 0; bgroupNum < superblockObject.NumBlockGroups; bgroupNum++ {
 		bgroupStartBid := bgroupNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId
 		bgdt.BlockBitmapLocation = bgroupStartBid
@@ -81,6 +85,8 @@ func New(
 				blockBitmap = append(blockBitmap, 0)
 			}
 			bitmapIndex := 0
+			fmt.Println("superBlockSize", superblockObject.BlockSize)
+			fmt.Println(bgdt.NumUsedBlocks)
 			for i := 0; i < bgdt.NumUsedBlocks; i++ {
 				blockBitmap[bitmapIndex] <<= 1
 				blockBitmap[bitmapIndex] |= 1
@@ -88,15 +94,17 @@ func New(
 					bitmapIndex += 1
 				}
 			}
+			fmt.Println(len(blockBitmap))
 			padBitIndex := bgdt.NumTotalBlocksInGroup
 			for padBitIndex < superblockObject.BlockSize {
 				blockBitmap[padBitIndex>>8] |= (1 << (padBitIndex & 0x07))
 				padBitIndex += 1
 			}
-			blockBitmapBytes := make([]byte, superblockObject.BlockSize)
+			blockBitmapBytes := []byte("")
 			for _, item := range blockBitmap {
-				binary.PutVarint(blockBitmapBytes, int64(item))
+				blockBitmapBytes = binary.AppendVarint(blockBitmapBytes, int64(item))
 			}
+			fmt.Println("block", len(blockBitmapBytes))
 			filesystemDevice.Write(
 				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
 				blockBitmapBytes,
@@ -114,19 +122,19 @@ func New(
 					bitmapIndex += 1
 				}
 			}
-			inodeBitmapBytes := make([]byte, superblockObject.BlockSize)
+			inodeBitmapBytes := []byte("")
 			for _, item := range inodeBitmap {
-				binary.PutVarint(inodeBitmapBytes, int64(item))
+				inodeBitmapBytes = binary.AppendVarint(inodeBitmapBytes, int64(item))
 			}
+			fmt.Println("inode", len(inodeBitmapBytes))
 			filesystemDevice.Write(
 				int64(bgdt.InodeBitmapLocation*superblockObject.BlockSize),
 				inodeBitmapBytes,
 			)
 		}
-		format := []string{"I", "I", "I", "H", "H", "H"}
 		bp := new(binary_pack.BinaryPack)
 		entryBytes, err := bp.Pack(
-			format,
+			[]string{"I", "I", "I", "H", "H", "H"},
 			[]interface{}{
 				bgdt.BlockBitmapLocation,
 				bgdt.InodeBitmapLocation,
@@ -139,18 +147,12 @@ func New(
 		if err != nil {
 			return bgdt, errors.New("unable to pack bytes: " + err.Error())
 		}
-		format = []string{}
+		emptyBytes := []byte("")
 		for i := 0; i < 14; i++ {
-			format = append(format, "B")
+			emptyBytes = binary.AppendVarint(emptyBytes, 0)
 		}
-		zeroFill := []interface{}{}
-		for i := 0; i < 14; i++ {
-			zeroFill = append(zeroFill, 0)
-		}
-		bp = new(binary_pack.BinaryPack)
-		emptyBytes, err := bp.Pack(format, zeroFill)
-		newBytes := bytes.Join([][]byte{[]byte(bgdtBytes), entryBytes, emptyBytes}, []byte(""))
-		filesystemDevice.Write(int64(bgdt.StartPos), newBytes)
+		bgdtBytes = bytes.Join([][]byte{bgdtBytes, entryBytes, emptyBytes}, []byte(""))
 	}
+	filesystemDevice.Write(int64(bgdt.StartPos), bgdtBytes)
 	return bgdt, nil
 }
