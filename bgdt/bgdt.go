@@ -100,10 +100,15 @@ func New(
 				blockBitmap[padBitIndex>>8] |= (1 << (padBitIndex & 0x07))
 				padBitIndex += 1
 			}
-			blockBitmapBytes := []byte("")
+			format := []string{}
+			values := []interface{}{}
 			for _, item := range blockBitmap {
-				blockBitmapBytes = binary.AppendVarint(blockBitmapBytes, int64(item))
+				format = append(format, "H")
+				values = append(values, int8(item))
 			}
+			bp := new(binary_pack.BinaryPack)
+			blockBitmapBytes, err := bp.Pack(format, values)
+			fmt.Println(err)
 			fmt.Println("block", len(blockBitmapBytes))
 			filesystemDevice.Write(
 				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
