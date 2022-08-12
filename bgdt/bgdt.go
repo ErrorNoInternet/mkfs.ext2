@@ -101,7 +101,27 @@ func New(
 				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
 				blockBitmapBytes,
 			)
-			// TODO INODE TOO
+
+			inodeBitmap := []int{}
+			for i := 0; i < superblockObject.BlockSize; i++ {
+				inodeBitmap = append(inodeBitmap, 0)
+			}
+			bitmapIndex = 0
+			for i := 0; i < bgdt.NumUsedBlocks; i++ {
+				inodeBitmap[bitmapIndex] <<= 1
+				inodeBitmap[bitmapIndex] |= 1
+				if (i+1)%8 == 0 {
+					bitmapIndex += 1
+				}
+			}
+			inodeBitmapBytes := make([]byte, superblockObject.BlockSize)
+			for _, item := range inodeBitmap {
+				binary.PutVarint(inodeBitmapBytes, int64(item))
+			}
+			filesystemDevice.Write(
+				int64(bgdt.InodeBitmapLocation*superblockObject.BlockSize),
+				inodeBitmapBytes,
+			)
 		}
 		format := []string{"I", "I", "I", "H", "H", "H"}
 		bp := new(binary_pack.BinaryPack)
