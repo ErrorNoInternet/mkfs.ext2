@@ -101,6 +101,7 @@ func New(
 				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
 				blockBitmapBytes,
 			)
+			// TODO INODE TOO
 		}
 		format := []string{"I", "I", "I", "H", "H", "H"}
 		bp := new(binary_pack.BinaryPack)

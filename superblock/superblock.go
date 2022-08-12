@@ -79,9 +79,10 @@ func New(
 	superblock.NumBlockGroups = int(math.Ceil(float64(superblock.NumBlocks) / float64(superblock.NumBlocksPerGroup)))
 	fmt.Println(superblock.NumBlockGroups)
 
-	superblock.FirstBlockId = 1
 	if superblock.BlockSize > 1024 {
 		superblock.FirstBlockId = 0
+	} else {
+		superblock.FirstBlockId = 1
 	}
 
 	superblock.CopyBlockGroupIds = []int{}
@@ -178,6 +179,7 @@ func New(
 		superblock.FeaturesIncompatible, superblock.FeaturesReadOnlyCompatible, string(superblock.VolumeId[:]), superblock.VolName, superblock.LastMountPath}
 	bp := new(binary_pack.BinaryPack)
 	sbBytes, err := bp.Pack(format, values)
+	fmt.Println(string(sbBytes))
 	if err != nil {
 		return superblock, errors.New("unable to pack bytes: " + err.Error())
 	}
