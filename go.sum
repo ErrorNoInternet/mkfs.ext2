@@ -1,0 +1,4 @@
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/roman-kachanovsky/go-binary-pack v0.0.0-20170214094030-e260e0dc6732 h1:cu91qu1+Yzl3BC0BUKKuiPkT5O2E4MaVTUAkh9Xeneg=
+github.com/roman-kachanovsky/go-binary-pack v0.0.0-20170214094030-e260e0dc6732/go.mod h1:4aW4O8uyDJOg9waxhoBpMtBTjVFT+m8NUoawVIAJMso=
