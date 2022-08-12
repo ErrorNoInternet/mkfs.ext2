@@ -2,7 +2,7 @@
 A mkfs.ext2 implementation in Go
 
 - [x] superblock
-- [ ] bgdt
-- [ ] device
+- [x] device
+- [ ] bgdt (in progress)
 - [ ] filesystem
 
