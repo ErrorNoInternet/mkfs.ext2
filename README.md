@@ -1,20 +1,19 @@
 # mkfs.ext2
 A mkfs.ext2 implementation in Go\
-This is still experimental and has issues, use at your own risk!
 
 ## Usage
 ```
 # Print all flags
 mkfs.ext2 -help
 
-# Create file with filesystem
+# Create file with filesystem (100 MB)
 mkfs.ext2 -device file.ext2
 
-# Create file with filesystem (100 MB)
-mkfs.ext2 -device file.ext2 -blocks 102400
+# Create filesystem on real device (200 MB)
+mkfs.ext2 -device /dev/sdX -blocks 5120
 
-# Create filesystem on real device
-mkfs.ext2 -device /dev/sdX
+# Create filesystem on real device (400 MB)
+mkfs.ext2 -device /dev/sdX -blocks 102400
 ```
 
 ## Objects
