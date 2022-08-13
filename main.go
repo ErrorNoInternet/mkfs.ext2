@@ -16,6 +16,7 @@ func main() {
 	flag.Parse()
 	if devicePath == "" {
 		flag.Usage()
+		return
 	}
 
 	err := filesystem.Make(devicePath, blockSize, blocks)
