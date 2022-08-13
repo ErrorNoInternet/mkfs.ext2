@@ -14,6 +14,31 @@ import (
 	binary_pack "github.com/roman-kachanovsky/go-binary-pack/binary-pack"
 )
 
+func WriteToBlock(
+	filesystemDevice *device.Device,
+	superblockObject *superblock.Superblock,
+	bid int,
+	offset int64,
+	data []byte,
+) {
+	filesystemDevice.Write(offset+int64(bid)*int64(superblockObject.BlockSize), data)
+	superblockObject.SetTimeLastWrite(time.Now().Unix())
+}
+
+func ReadBlock(
+	filesystemDevice *device.Device,
+	superblockObject *superblock.Superblock,
+	bid int,
+	offset int64,
+	count int,
+) []byte {
+	if count == 0 {
+		count = superblockObject.BlockSize
+	}
+	block := filesystemDevice.Read(bid*superblockObject.BlockSize, count)
+	return block
+}
+
 func Make(fileName string, blockSize, numBlocks int) error {
 	if blockSize != 1024 && blockSize != 2048 && blockSize != 4096 {
 		return errors.New("invalid blockSize specified")
@@ -73,6 +98,9 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	values := []interface{}{mode, uid, 0, currentTime, currentTime, currentTime, 0, gid}
 	bp := new(binary_pack.BinaryPack)
 	rootInodeBytes, err := bp.Pack(format, values)
+	if err != nil {
+		return err
+	}
 	rootInodeBytes = bytes.Join([][]byte{rootInodeBytes, emptyBytes}, []byte(""))
 	filesystemDevice.Write(int64(rootInodeOffset), rootInodeBytes)
 
@@ -146,8 +174,42 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	if err != nil {
 		return err
 	}
-	filesystemDevice.Write(int64(0+rootBid*superblockObject.BlockSize), bytes.Join([][]byte{defaultEntries1, defaultEntries2, defaultEntries3, defaultEntries4, defaultEntries5, defaultEntries6, defaultEntries7}, []byte("")))
-	superblockObject.SetTimeLastWrite(time.Now().Unix())
+	WriteToBlock(filesystemDevice, superblockObject, rootBid, 0, bytes.Join([][]byte{defaultEntries1, defaultEntries2, defaultEntries3, defaultEntries4, defaultEntries5, defaultEntries6, defaultEntries7}, []byte("")))
+
+	inodeNum := 2
+	bgroupNum := (inodeNum - 1) / superblockObject.NumInodesPerGroup
+	bgroupIndex := (inodeNum - 1) % superblockObject.NumInodesPerGroup
+	bgdtEntry := bgdt.Entries[bgroupNum]
+	bitmapByteIndex := bgroupIndex / 8
+	tableBid := bgdtEntry.InodeTableLocation + (bgroupIndex*superblock.InodeSize)/blockSize
+	inodeTableOffset := (bgroupIndex * superblockObject.InodeSize) % blockSize
+	bitmapByte := []uint8(ReadBlock(bgdtEntry.InodeBitmapLocation, bitmapByteIndex, 1))[0]
+	inodeBytes := ReadBlock(tableBid, inodeTableOffset, superblockObject.InodeSize)
+
+	bp = new(binary_pack.BinaryPack)
+	data, err := bp.Pack([]string{"h"}, []interface{}{2})
+	if err != nil {
+		return err
+	}
+	WriteToBlock(tableBid, inodeTableOffset+26, data)
+
+	// TODO inode.assignNextBlockId
+
+	inodeSize := superblock.InodeSize + superblock.BlockSize
+	bp = new(binary_pack.BinaryPack)
+	data, err := bp.Pack([]string{"I"}, []interface{}{inodeSize & 0xFFFFFFFF})
+	if err != nil {
+		return err
+	}
+	WriteToBlock(tableBid, inodeTableOffset+4, data)
+	if superblock.RevLevel > 0 && (self.mode&0x8000) != 0 {
+		bp = new(binary_pack.BinaryPack)
+		data, err = bp.Pack([]string{"I"}, []interface{}{inodeSize >> 32})
+		if err != nil {
+			return err
+		}
+		WriteToBlock(tableBud, inodeTableOffset+108, data)
+	}
 
 	filesystemDevice.Unmount()
 	return nil
