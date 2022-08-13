@@ -103,6 +103,7 @@ func New(
 			last7 *= 7
 		}
 	}
+	fmt.Println(superblock.CopyBlockGroupIds)
 
 	superblock.BgdtBlocks = int(math.Ceil(float64(superblock.NumBlockGroups*32) / float64(superblock.BlockSize)))
 	superblock.InodeTableBlocks = int(math.Ceil(float64(superblock.NumInodesPerGroup*superblock.InodeSize) / float64(superblock.BlockSize)))

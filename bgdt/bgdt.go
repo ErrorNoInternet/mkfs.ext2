@@ -38,9 +38,11 @@ func New(
 	bgdt.StartPos = (bgNumCopy*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId + 1) * superblockObject.BlockSize
 	bgdt.NumBgdtBlocks = int(math.Ceil(float64(superblockObject.NumBlockGroups*32) / float64(superblockObject.BlockSize)))
 	bgdt.InodeTableBlocks = int(math.Ceil(float64(superblockObject.NumInodesPerGroup*superblockObject.InodeSize) / float64(superblockObject.BlockSize)))
+	fmt.Println("InodeTableBlocks", bgdt.InodeTableBlocks)
 
 	bgdtBytes := []byte("")
 	fmt.Println("superBlockGroups", superblockObject.NumBlockGroups)
+	superblockObject.CopyBlockGroupIds = append(superblockObject.CopyBlockGroupIds, 0)
 	for bgroupNum := 0; bgroupNum < superblockObject.NumBlockGroups; bgroupNum++ {
 		bgroupStartBid := bgroupNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId
 		bgdt.BlockBitmapLocation = bgroupStartBid
@@ -80,13 +82,13 @@ func New(
 		}
 
 		if bgNumCopy == 0 {
-			blockBitmap := []int{}
+			blockBitmap := []uint64{}
 			for i := 0; i < superblockObject.BlockSize; i++ {
 				blockBitmap = append(blockBitmap, 0)
 			}
 			bitmapIndex := 0
 			fmt.Println("superBlockSize", superblockObject.BlockSize)
-			fmt.Println(bgdt.NumUsedBlocks)
+			fmt.Println(bgdt.NumUsedBlocks, "AaA")
 			for i := 0; i < bgdt.NumUsedBlocks; i++ {
 				blockBitmap[bitmapIndex] <<= 1
 				blockBitmap[bitmapIndex] |= 1
@@ -94,21 +96,16 @@ func New(
 					bitmapIndex += 1
 				}
 			}
-			fmt.Println(len(blockBitmap))
 			padBitIndex := bgdt.NumTotalBlocksInGroup
 			for padBitIndex < superblockObject.BlockSize {
 				blockBitmap[padBitIndex>>8] |= (1 << (padBitIndex & 0x07))
 				padBitIndex += 1
 			}
-			format := []string{}
-			values := []interface{}{}
+			blockBitmapBytes := []byte("")
 			for _, item := range blockBitmap {
-				format = append(format, "H")
-				values = append(values, int8(item))
+				blockBitmapBytes = binary.AppendVarint(blockBitmapBytes, item)
 			}
-			bp := new(binary_pack.BinaryPack)
-			blockBitmapBytes, err := bp.Pack(format, values)
-			fmt.Println(err)
+			fmt.Println(blockBitmapBytes)
 			fmt.Println("block", len(blockBitmapBytes))
 			filesystemDevice.Write(
 				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
