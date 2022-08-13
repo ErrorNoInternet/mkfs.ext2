@@ -1,5 +1,6 @@
 # mkfs.ext2
-A mkfs.ext2 implementation in Go
+A mkfs.ext2 implementation in Go\
+This is still experimental and has issues, use at your own risk!
 
 ## Usage
 ```
