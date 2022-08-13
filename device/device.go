@@ -22,6 +22,7 @@ func (device *Device) Write(position int64, bytes []byte) {
 	if !device.Mounted {
 		panic("device isn't mounted")
 	}
+
 	device.ImageFile.Seek(position, 0)
 	device.ImageFile.Write(bytes)
 }
