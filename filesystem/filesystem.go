@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/ErrorNoInternet/mkfs.ext2/bgdt"
@@ -48,6 +47,7 @@ func Make(fileName string, blockSize, numBlocks int) error {
 			bgdt.New(bgNum, shadowSb, filesystemDevice)
 		}
 	}
-	fmt.Println(bgdtObject)
+
+	rootInodeOffset := bgdt.entries[0]
 	return nil
 }

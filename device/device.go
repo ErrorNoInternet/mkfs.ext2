@@ -30,10 +30,6 @@ func (device *Device) Write(position int64, bytes []byte) {
 }
 
 func New(fileName string, bytes int64) (*Device, error) {
-	_, err := os.Stat(fileName)
-	if err == nil {
-		return nil, errors.New("specified image file already exists")
-	}
 	file, err := os.Create(fileName)
 	if err != nil {
 		return nil, errors.New("unable to create image file: " + err.Error())

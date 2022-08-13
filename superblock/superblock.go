@@ -189,6 +189,7 @@ func New(
 	for i := 0; i < 824; i++ {
 		emptyBytes = binary.AppendVarint(emptyBytes, 0)
 	}
+	fmt.Println(len(emptyBytes))
 	newBytes := bytes.Join([][]byte{sbBytes, emptyBytes}, []byte(""))
 	filesystemDevice.Write(byteOffset, newBytes)
 	return superblock, nil

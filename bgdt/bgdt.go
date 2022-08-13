@@ -27,6 +27,9 @@ type Bgdt struct {
 	NumFreeInodes         int
 }
 
+type BgdtEntry struct {
+}
+
 func New(
 	bgNumCopy int,
 	superblockObject *superblock.Superblock,
@@ -38,10 +41,8 @@ func New(
 	bgdt.StartPos = (bgNumCopy*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId + 1) * superblockObject.BlockSize
 	bgdt.NumBgdtBlocks = int(math.Ceil(float64(superblockObject.NumBlockGroups*32) / float64(superblockObject.BlockSize)))
 	bgdt.InodeTableBlocks = int(math.Ceil(float64(superblockObject.NumInodesPerGroup*superblockObject.InodeSize) / float64(superblockObject.BlockSize)))
-	fmt.Println("InodeTableBlocks", bgdt.InodeTableBlocks)
 
 	bgdtBytes := []byte("")
-	fmt.Println("superBlockGroups", superblockObject.NumBlockGroups)
 	superblockObject.CopyBlockGroupIds = append(superblockObject.CopyBlockGroupIds, 0)
 	for bgroupNum := 0; bgroupNum < superblockObject.NumBlockGroups; bgroupNum++ {
 		bgroupStartBid := bgroupNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId
@@ -87,8 +88,6 @@ func New(
 				blockBitmap = append(blockBitmap, 0)
 			}
 			bitmapIndex := 0
-			fmt.Println("superBlockSize", superblockObject.BlockSize)
-			fmt.Println(bgdt.NumUsedBlocks, "AaA")
 			for i := 0; i < bgdt.NumUsedBlocks; i++ {
 				blockBitmap[bitmapIndex] <<= 1
 				blockBitmap[bitmapIndex] |= 1
@@ -96,7 +95,6 @@ func New(
 					bitmapIndex += 1
 				}
 			}
-			fmt.Println("block", len(blockBitmap))
 			padBitIndex := bgdt.NumTotalBlocksInGroup
 			for padBitIndex < superblockObject.BlockSize {
 				blockBitmap[padBitIndex>>8] |= (1 << (padBitIndex & 0x07))
@@ -119,8 +117,6 @@ func New(
 					bitmapIndex += 1
 				}
 			}
-			fmt.Println([]byte(inodeBitmap))
-			fmt.Println("inode", len(inodeBitmap))
 			filesystemDevice.Write(
 				int64(bgdt.InodeBitmapLocation*superblockObject.BlockSize),
 				[]byte(inodeBitmap),
