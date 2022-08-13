@@ -96,6 +96,7 @@ func New(
 					bitmapIndex += 1
 				}
 			}
+			fmt.Println("block", len(blockBitmap))
 			padBitIndex := bgdt.NumTotalBlocksInGroup
 			for padBitIndex < superblockObject.BlockSize {
 				blockBitmap[padBitIndex>>8] |= (1 << (padBitIndex & 0x07))
@@ -103,10 +104,11 @@ func New(
 			}
 			blockBitmapBytes := []byte("")
 			for _, item := range blockBitmap {
-				blockBitmapBytes = binary.AppendVarint(blockBitmapBytes, item)
+				newByte := make([]byte, 2)
+				binary.PutUvarint(newByte, item)
+				blockBitmapBytes = bytes.Join([][]byte{blockBitmapBytes, newByte[:1]}, []byte(""))
 			}
 			fmt.Println(blockBitmapBytes)
-			fmt.Println("block", len(blockBitmapBytes))
 			filesystemDevice.Write(
 				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
 				blockBitmapBytes,
