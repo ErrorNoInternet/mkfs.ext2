@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
+	"math"
 	"time"
 
 	"github.com/ErrorNoInternet/mkfs.ext2/bgdt"
@@ -35,7 +35,7 @@ func ReadBlock(
 	if count == 0 {
 		count = superblockObject.BlockSize
 	}
-	block := filesystemDevice.Read(bid*superblockObject.BlockSize, count)
+	block := filesystemDevice.Read(int64(bid*superblockObject.BlockSize), int64(count))
 	return block
 }
 
@@ -68,7 +68,6 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	}
 	if len(superblockObject.CopyBlockGroupIds) > 0 {
 		for _, bgNum := range superblockObject.CopyBlockGroupIds[1:] {
-			fmt.Println(bgNum, "bgNum")
 			offset := int64((bgNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId) * blockSize)
 			shadowSb, err := superblock.New(offset, filesystemDevice, bgNum, blockSize, numBlocks, currentTime, volumeIdBytes)
 			if err != nil {
@@ -95,7 +94,7 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	mode |= 0x0004
 	mode |= 0x0001
 	format := []string{"H", "H", "I", "I", "I", "I", "I", "H"}
-	values := []interface{}{mode, uid, 0, currentTime, currentTime, currentTime, 0, gid}
+	values := []interface{}{mode, uid, 0, int(currentTime), int(currentTime), int(currentTime), 0, gid}
 	bp := new(binary_pack.BinaryPack)
 	rootInodeBytes, err := bp.Pack(format, values)
 	if err != nil {
@@ -154,7 +153,6 @@ func Make(fileName string, blockSize, numBlocks int) error {
 			}
 		}
 	}
-	bp = new(binary_pack.BinaryPack)
 	defaultEntries1, err := bp.Pack([]string{"I", "H"}, []interface{}{2, 12})
 	if err != nil {
 		return err
@@ -179,36 +177,53 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	inodeNum := 2
 	bgroupNum := (inodeNum - 1) / superblockObject.NumInodesPerGroup
 	bgroupIndex := (inodeNum - 1) % superblockObject.NumInodesPerGroup
-	bgdtEntry := bgdt.Entries[bgroupNum]
-	bitmapByteIndex := bgroupIndex / 8
-	tableBid := bgdtEntry.InodeTableLocation + (bgroupIndex*superblock.InodeSize)/blockSize
+	bgdtEntry = bgdtObject.Entries[bgroupNum]
+	//	bitmapByteIndex := bgroupIndex / 8
+	tableBid := bgdtEntry.InodeTableLocation + (bgroupIndex*superblockObject.InodeSize)/blockSize
 	inodeTableOffset := (bgroupIndex * superblockObject.InodeSize) % blockSize
-	bitmapByte := []uint8(ReadBlock(bgdtEntry.InodeBitmapLocation, bitmapByteIndex, 1))[0]
-	inodeBytes := ReadBlock(tableBid, inodeTableOffset, superblockObject.InodeSize)
+	//	bitmapByte := []uint8(ReadBlock(filesystemDevice, superblockObject, bgdtEntry.InodeBitmapLocation, int64(bitmapByteIndex), 1))[0]
+	//	inodeBytes := ReadBlock(filesystemDevice, superblockObject, tableBid, int64(inodeTableOffset), superblockObject.InodeSize)
 
-	bp = new(binary_pack.BinaryPack)
 	data, err := bp.Pack([]string{"h"}, []interface{}{2})
 	if err != nil {
 		return err
 	}
-	WriteToBlock(tableBid, inodeTableOffset+26, data)
+	WriteToBlock(filesystemDevice, superblockObject, tableBid, int64(inodeTableOffset+26), data)
 
-	// TODO inode.assignNextBlockId
+	inodeBlocks := []int{}
+	for i := 0; i < 15; i++ {
+		inodeBlocks = append(inodeBlocks, 0)
+	}
+	size := 0
+	inodeNumDataBlocks := int(math.Ceil(float64(size) / float64(superblockObject.BlockSize)))
+	inodeNumDirectBlocks := 12
+	if inodeNumDataBlocks < inodeNumDirectBlocks {
+		inodeBlocks[inodeNumDataBlocks] = rootBid
+		data, err = bp.Pack([]string{"I"}, []interface{}{rootBid})
+		WriteToBlock(filesystemDevice, superblockObject, tableBid, int64(inodeTableOffset+(40+inodeNumDataBlocks*4)), data)
+		if err != nil {
+			return err
+		}
+		inodeNumDataBlocks += 1
+		data, err = bp.Pack([]string{"I"}, []interface{}{inodeNumDataBlocks * (2 << superblockObject.LogBlockSize)})
+		if err != nil {
+			return err
+		}
+		WriteToBlock(filesystemDevice, superblockObject, tableBid, int64(inodeTableOffset+28), data)
+	}
 
-	inodeSize := superblock.InodeSize + superblock.BlockSize
-	bp = new(binary_pack.BinaryPack)
-	data, err := bp.Pack([]string{"I"}, []interface{}{inodeSize & 0xFFFFFFFF})
+	inodeSize := superblockObject.InodeSize + superblockObject.BlockSize
+	data, err = bp.Pack([]string{"I"}, []interface{}{inodeSize & 0xFFFFFFFF})
 	if err != nil {
 		return err
 	}
-	WriteToBlock(tableBid, inodeTableOffset+4, data)
-	if superblock.RevLevel > 0 && (self.mode&0x8000) != 0 {
-		bp = new(binary_pack.BinaryPack)
+	WriteToBlock(filesystemDevice, superblockObject, tableBid, int64(inodeTableOffset+4), data)
+	if superblockObject.RevLevel > 0 && (mode&0x8000) != 0 {
 		data, err = bp.Pack([]string{"I"}, []interface{}{inodeSize >> 32})
 		if err != nil {
 			return err
 		}
-		WriteToBlock(tableBud, inodeTableOffset+108, data)
+		WriteToBlock(filesystemDevice, superblockObject, tableBid, int64(inodeTableOffset+108), data)
 	}
 
 	filesystemDevice.Unmount()

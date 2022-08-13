@@ -5,6 +5,6 @@ A mkfs.ext2 implementation in Go
 - [x] Device
 - [x] Bgdt
   - [x] BgdtEntry
-- [ ] Inode (in progress)
-- [ ] Filesystem (relies on Inode)
+- [x] Inode
+- [x] Filesystem
 

@@ -3,7 +3,6 @@ package device
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"os"
 )
 
@@ -25,7 +24,6 @@ func (device *Device) Write(position int64, bytes []byte) {
 	}
 	device.ImageFile.Seek(position, 0)
 	device.ImageFile.Write(bytes)
-	fmt.Println("writing", len(bytes), "at", position)
 }
 
 func (device *Device) Read(position, size int64) []byte {

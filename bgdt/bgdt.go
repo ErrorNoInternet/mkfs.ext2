@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -92,8 +91,6 @@ func New(
 	superblockObject *superblock.Superblock,
 	filesystemDevice *device.Device,
 ) (*Bgdt, error) {
-	fmt.Println("BGDT START")
-
 	bgdt := &Bgdt{}
 	bgdt.Entries = []*BgdtEntry{}
 	bgdt.StartPos = (bgNumCopy*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId + 1) * superblockObject.BlockSize
@@ -216,10 +213,6 @@ func New(
 		bgdt.Entries = append(bgdt.Entries, entry)
 	}
 	filesystemDevice.Write(int64(bgdt.StartPos), bgdtBytes)
-
-	for _, entry := range bgdt.Entries {
-		fmt.Println(entry.BlockBitmapLocation, entry.InodeBitmapLocation, entry.InodeTableLocation, entry.NumFreeBlocks, entry.NumFreeInodes, entry.NumInodesAsDirs)
-	}
 
 	return bgdt, nil
 }

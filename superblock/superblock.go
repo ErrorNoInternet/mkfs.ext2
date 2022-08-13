@@ -144,8 +144,6 @@ func New(
 	currentTime int64,
 	volumeId [16]byte,
 ) (*Superblock, error) {
-	fmt.Println("SUPERBLOCK START")
-
 	superblock := &Superblock{
 		BgNum:     bgNum,
 		BlockSize: blockSize,
