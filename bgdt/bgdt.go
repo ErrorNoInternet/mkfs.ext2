@@ -82,7 +82,7 @@ func New(
 		}
 
 		if bgNumCopy == 0 {
-			blockBitmap := []uint64{}
+			blockBitmap := []uint8{}
 			for i := 0; i < superblockObject.BlockSize; i++ {
 				blockBitmap = append(blockBitmap, 0)
 			}
@@ -102,18 +102,12 @@ func New(
 				blockBitmap[padBitIndex>>8] |= (1 << (padBitIndex & 0x07))
 				padBitIndex += 1
 			}
-			blockBitmapBytes := []byte("")
-			for _, item := range blockBitmap {
-				newByte := make([]byte, 2)
-				binary.PutUvarint(newByte, item)
-				blockBitmapBytes = bytes.Join([][]byte{blockBitmapBytes, newByte[:1]}, []byte(""))
-			}
 			filesystemDevice.Write(
 				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
-				blockBitmapBytes,
+				[]byte(blockBitmap),
 			)
 
-			inodeBitmap := []uint64{}
+			inodeBitmap := []uint8{}
 			for i := 0; i < superblockObject.BlockSize; i++ {
 				inodeBitmap = append(inodeBitmap, 0)
 			}
@@ -125,16 +119,11 @@ func New(
 					bitmapIndex += 1
 				}
 			}
-			inodeBitmapBytes := []byte("")
-			for _, item := range inodeBitmap {
-				newByte := make([]byte, 2)
-				binary.PutUvarint(newByte, item)
-				inodeBitmapBytes = bytes.Join([][]byte{inodeBitmapBytes, newByte[:1]}, []byte(""))
-			}
-			fmt.Println("inode", len(inodeBitmapBytes))
+			fmt.Println([]byte(inodeBitmap))
+			fmt.Println("inode", len(inodeBitmap))
 			filesystemDevice.Write(
 				int64(bgdt.InodeBitmapLocation*superblockObject.BlockSize),
-				inodeBitmapBytes,
+				[]byte(inodeBitmap),
 			)
 		}
 		bp := new(binary_pack.BinaryPack)
