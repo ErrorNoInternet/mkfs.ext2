@@ -6,5 +6,6 @@ The implementation is mostly done, however they don't work correctly yet and nee
 - [x] Device
 - [x] Bgdt
   - [x] BgdtEntry
-- [ ] Filesystem (in progress)
+- [ ] Inode (in progress)
+- [ ] Filesystem (relies on Inode)
 

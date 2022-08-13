@@ -28,6 +28,17 @@ func (device *Device) Write(position int64, bytes []byte) {
 	fmt.Println("writing", len(bytes), "at", position)
 }
 
+func (device *Device) Read(position, size int64) []byte {
+	if !device.Mounted {
+		panic("device isn't mounted")
+	}
+
+	data := make([]byte, size)
+	device.ImageFile.Seek(position, 0)
+	device.ImageFile.Read(data)
+	return data
+}
+
 func New(fileName string, bytes int64) (*Device, error) {
 	file, err := os.Create(fileName)
 	if err != nil {
