@@ -108,13 +108,12 @@ func New(
 				binary.PutUvarint(newByte, item)
 				blockBitmapBytes = bytes.Join([][]byte{blockBitmapBytes, newByte[:1]}, []byte(""))
 			}
-			fmt.Println(blockBitmapBytes)
 			filesystemDevice.Write(
 				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
 				blockBitmapBytes,
 			)
 
-			inodeBitmap := []int{}
+			inodeBitmap := []uint64{}
 			for i := 0; i < superblockObject.BlockSize; i++ {
 				inodeBitmap = append(inodeBitmap, 0)
 			}
@@ -128,7 +127,9 @@ func New(
 			}
 			inodeBitmapBytes := []byte("")
 			for _, item := range inodeBitmap {
-				inodeBitmapBytes = binary.AppendVarint(inodeBitmapBytes, int64(item))
+				newByte := make([]byte, 2)
+				binary.PutUvarint(newByte, item)
+				inodeBitmapBytes = bytes.Join([][]byte{inodeBitmapBytes, newByte[:1]}, []byte(""))
 			}
 			fmt.Println("inode", len(inodeBitmapBytes))
 			filesystemDevice.Write(
