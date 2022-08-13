@@ -178,11 +178,8 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	bgroupNum := (inodeNum - 1) / superblockObject.NumInodesPerGroup
 	bgroupIndex := (inodeNum - 1) % superblockObject.NumInodesPerGroup
 	bgdtEntry = bgdtObject.Entries[bgroupNum]
-	//	bitmapByteIndex := bgroupIndex / 8
 	tableBid := bgdtEntry.InodeTableLocation + (bgroupIndex*superblockObject.InodeSize)/blockSize
 	inodeTableOffset := (bgroupIndex * superblockObject.InodeSize) % blockSize
-	//	bitmapByte := []uint8(ReadBlock(filesystemDevice, superblockObject, bgdtEntry.InodeBitmapLocation, int64(bitmapByteIndex), 1))[0]
-	//	inodeBytes := ReadBlock(filesystemDevice, superblockObject, tableBid, int64(inodeTableOffset), superblockObject.InodeSize)
 
 	data, err := bp.Pack([]string{"h"}, []interface{}{2})
 	if err != nil {

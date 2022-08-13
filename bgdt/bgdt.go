@@ -165,7 +165,7 @@ func New(
 				inodeBitmap = append(inodeBitmap, 0)
 			}
 			bitmapIndex = 0
-			for i := 0; i < bgdt.NumUsedBlocks; i++ {
+			for i := 0; i < bgdt.NumUsedInodes; i++ {
 				inodeBitmap[bitmapIndex] <<= 1
 				inodeBitmap[bitmapIndex] |= 1
 				if (i+1)%8 == 0 {
