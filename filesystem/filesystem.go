@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/ErrorNoInternet/mkfs.ext2/bgdt"
@@ -19,7 +20,7 @@ func Make(fileName string, blockSize, numBlocks int) error {
 		return err
 	}
 
-	currentTime := time.Now().UnixNano()
+	currentTime := time.Now().Unix()
 	volumeIdBytes := [16]byte(uuid.New())
 	superblockObject, err := superblock.New(
 		1024,
@@ -39,6 +40,7 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	}
 	if len(superblockObject.CopyBlockGroupIds) > 0 {
 		for _, bgNum := range superblockObject.CopyBlockGroupIds[1:] {
+			fmt.Println(bgNum, "bgNum")
 			offset := int64((bgNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId) * blockSize)
 			shadowSb, err := superblock.New(offset, filesystemDevice, bgNum, blockSize, numBlocks, currentTime, volumeIdBytes)
 			if err != nil {
@@ -48,6 +50,8 @@ func Make(fileName string, blockSize, numBlocks int) error {
 		}
 	}
 
-	rootInodeOffset := bgdt.entries[0]
+	rootInodeOffset := bgdtObject.Entries[0].InodeTableLocation*superblockObject.BlockSize + superblockObject.InodeSize
+	fmt.Println(rootInodeOffset, "offset")
+	filesystemDevice.Unmount()
 	return nil
 }

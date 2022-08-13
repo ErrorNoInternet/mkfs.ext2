@@ -26,7 +26,6 @@ func (device *Device) Write(position int64, bytes []byte) {
 	device.ImageFile.Seek(position, 0)
 	device.ImageFile.Write(bytes)
 	fmt.Println("writing", len(bytes), "at", position)
-	device.ImageFile.Sync()
 }
 
 func New(fileName string, bytes int64) (*Device, error) {

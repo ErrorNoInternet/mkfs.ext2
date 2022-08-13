@@ -5,6 +5,6 @@ The implementation is mostly done, however they don't work correctly yet and nee
 - [x] Superblock
 - [x] Device
 - [x] Bgdt
-  - [ ] BgdtEntry (in progress)
-- [ ] Filesystem
+  - [x] BgdtEntry
+- [ ] Filesystem (in progress)
 

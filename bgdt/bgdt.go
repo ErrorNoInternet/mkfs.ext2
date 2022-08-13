@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/ErrorNoInternet/mkfs.ext2/device"
 	"github.com/ErrorNoInternet/mkfs.ext2/superblock"
@@ -25,9 +26,65 @@ type Bgdt struct {
 	NumFreeBlocks         int
 	NumUsedInodes         int
 	NumFreeInodes         int
+	Entries               []*BgdtEntry
 }
 
 type BgdtEntry struct {
+	StartPos            int
+	BlockBitmapLocation int
+	InodeBitmapLocation int
+	InodeTableLocation  int
+	InodeTableBlocks    int
+	NumFreeBlocks       int
+	NumFreeInodes       int
+	NumInodesAsDirs     int
+	Device              *device.Device
+	Superblock          *superblock.Superblock
+}
+
+func (bgdtEntry *BgdtEntry) SetNumFreeBlocks(numFreeBlocks int) error {
+	bgdtEntry.NumFreeBlocks = numFreeBlocks
+	bp := new(binary_pack.BinaryPack)
+	bytes, err := bp.Pack([]string{"H"}, []interface{}{numFreeBlocks})
+	if err != nil {
+		return err
+	}
+	bgdtEntry.WriteData(12, bytes)
+	return nil
+}
+
+func (bgdtEntry *BgdtEntry) SetNumFreeInodes(numFreeInodes int) error {
+	bgdtEntry.NumFreeInodes = numFreeInodes
+	bp := new(binary_pack.BinaryPack)
+	bytes, err := bp.Pack([]string{"H"}, []interface{}{numFreeInodes})
+	if err != nil {
+		return err
+	}
+	bgdtEntry.WriteData(14, bytes)
+	return nil
+}
+
+func (bgdtEntry *BgdtEntry) SetNumInodesAsDirs(numInodesAsDirs int) error {
+	bgdtEntry.NumInodesAsDirs = numInodesAsDirs
+	bp := new(binary_pack.BinaryPack)
+	bytes, err := bp.Pack([]string{"H"}, []interface{}{numInodesAsDirs})
+	if err != nil {
+		return err
+	}
+	bgdtEntry.WriteData(16, bytes)
+	return nil
+}
+
+func (bgdtEntry *BgdtEntry) WriteData(offset int64, data []byte) {
+	for _, groupId := range bgdtEntry.Superblock.CopyBlockGroupIds {
+		groupStart := groupId * bgdtEntry.Superblock.NumBlocksPerGroup * bgdtEntry.Superblock.BlockSize
+		tableStart := groupStart + (bgdtEntry.Superblock.BlockSize * (bgdtEntry.Superblock.FirstBlockId + 1))
+		bgdtEntry.Device.Write(int64(tableStart+bgdtEntry.StartPos)+offset, data)
+		if !bgdtEntry.Superblock.SaveCopies {
+			break
+		}
+	}
+	bgdtEntry.Superblock.TimeLastWrite = time.Now().Unix()
 }
 
 func New(
@@ -38,6 +95,7 @@ func New(
 	fmt.Println("BGDT START")
 
 	bgdt := &Bgdt{}
+	bgdt.Entries = []*BgdtEntry{}
 	bgdt.StartPos = (bgNumCopy*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId + 1) * superblockObject.BlockSize
 	bgdt.NumBgdtBlocks = int(math.Ceil(float64(superblockObject.NumBlockGroups*32) / float64(superblockObject.BlockSize)))
 	bgdt.InodeTableBlocks = int(math.Ceil(float64(superblockObject.NumInodesPerGroup*superblockObject.InodeSize) / float64(superblockObject.BlockSize)))
@@ -142,7 +200,26 @@ func New(
 			emptyBytes = binary.AppendVarint(emptyBytes, 0)
 		}
 		bgdtBytes = bytes.Join([][]byte{bgdtBytes, entryBytes, emptyBytes}, []byte(""))
+
+		startPos := bgroupNum * 32
+		entry := &BgdtEntry{
+			StartPos:            startPos,
+			Device:              filesystemDevice,
+			Superblock:          superblockObject,
+			BlockBitmapLocation: bgdt.BlockBitmapLocation,
+			InodeBitmapLocation: bgdt.InodeBitmapLocation,
+			InodeTableLocation:  bgdt.InodeTableLocation,
+		}
+		entry.SetNumFreeBlocks(bgdt.NumFreeBlocks)
+		entry.SetNumFreeInodes(bgdt.NumFreeInodes)
+		entry.SetNumInodesAsDirs(bgdt.NumInodesAsDirs)
+		bgdt.Entries = append(bgdt.Entries, entry)
 	}
 	filesystemDevice.Write(int64(bgdt.StartPos), bgdtBytes)
+
+	for _, entry := range bgdt.Entries {
+		fmt.Println(entry.BlockBitmapLocation, entry.InodeBitmapLocation, entry.InodeTableLocation, entry.NumFreeBlocks, entry.NumFreeInodes, entry.NumInodesAsDirs)
+	}
+
 	return bgdt, nil
 }
