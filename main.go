@@ -19,14 +19,8 @@ func main() {
 		flag.Usage()
 		return
 	}
-
-	file, err := os.Create(devicePath)
-	if err != nil {
-		fmt.Printf("unable to create file: %v\n", err)
-		return
-	}
 	if blocks == 0 {
-		deviceInformation, err := file.Stat()
+		deviceInformation, err := os.Stat(devicePath)
 		if err != nil {
 			blocks = 25600
 		} else {
@@ -34,6 +28,11 @@ func main() {
 		}
 	}
 
+	file, err := os.Create(devicePath)
+	if err != nil {
+		fmt.Printf("unable to create file: %v\n", err)
+		return
+	}
 	err = filesystem.Make(file, blockSize, blocks)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)

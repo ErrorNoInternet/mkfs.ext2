@@ -37,13 +37,10 @@ func (device *Device) Read(position, size int64) []byte {
 }
 
 func New(file *os.File, bytes int64) (*Device, error) {
-	_, err := file.Seek(bytes-1, 0)
-	if err != nil {
-		return nil, err
-	}
+	file.Seek(bytes-1, 0)
 	buffer := make([]byte, 1)
 	binary.PutVarint(buffer, 0)
-	_, err = file.Write(buffer)
+	_, err := file.Write(buffer)
 	if err != nil {
 		return nil, err
 	}
