@@ -2,12 +2,10 @@ package device
 
 import (
 	"encoding/binary"
-	"errors"
 	"os"
 )
 
 type Device struct {
-	FileName  string
 	ImageFile *os.File
 	Mounted   bool
 }
@@ -38,18 +36,18 @@ func (device *Device) Read(position, size int64) []byte {
 	return data
 }
 
-func New(fileName string, bytes int64) (*Device, error) {
-	file, err := os.Create(fileName)
+func New(file *os.File, bytes int64) (*Device, error) {
+	_, err := file.Seek(bytes-1, 0)
 	if err != nil {
-		return nil, errors.New("unable to create image file: " + err.Error())
+		return nil, err
 	}
-
-	file.Seek(bytes-1, 0)
 	buffer := make([]byte, 1)
 	binary.PutVarint(buffer, 0)
-	file.Write(buffer)
+	_, err = file.Write(buffer)
+	if err != nil {
+		return nil, err
+	}
 	return &Device{
-		FileName:  fileName,
 		ImageFile: file,
 		Mounted:   true,
 	}, nil

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"math"
+	"os"
 	"time"
 
 	"github.com/ErrorNoInternet/mkfs.ext2/bgdt"
@@ -39,11 +40,11 @@ func ReadBlock(
 	return block
 }
 
-func Make(fileName string, blockSize, numBlocks int) error {
+func Make(file *os.File, blockSize, numBlocks int) error {
 	if blockSize != 1024 && blockSize != 2048 && blockSize != 4096 {
 		return errors.New("invalid blockSize specified")
 	}
-	filesystemDevice, err := device.New(fileName, int64(blockSize*numBlocks))
+	filesystemDevice, err := device.New(file, int64(blockSize*numBlocks))
 	if err != nil {
 		return err
 	}

@@ -20,16 +20,21 @@ func main() {
 		return
 	}
 
+	file, err := os.Create(devicePath)
+	if err != nil {
+		fmt.Printf("unable to create file: %v\n", err)
+		return
+	}
 	if blocks == 0 {
-		deviceObject, err := os.Stat(devicePath)
+		deviceInformation, err := file.Stat()
 		if err != nil {
 			blocks = 25600
 		} else {
-			blocks = int(deviceObject.Size() / int64(blockSize))
+			blocks = int(deviceInformation.Size() / int64(blockSize))
 		}
 	}
 
-	err := filesystem.Make(devicePath, blockSize, blocks)
+	err = filesystem.Make(file, blockSize, blocks)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
