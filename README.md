@@ -1,5 +1,5 @@
 # mkfs.ext2
-A mkfs.ext2 implementation in Go\
+A mkfs.ext2 implementation in Go
 
 ## Usage
 ```
