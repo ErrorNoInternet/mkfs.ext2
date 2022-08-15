@@ -98,7 +98,6 @@ func New(
 	bgdt.InodeTableBlocks = int(math.Ceil(float64(superblockObject.NumInodesPerGroup*superblockObject.InodeSize) / float64(superblockObject.BlockSize)))
 
 	bgdtBytes := []byte("")
-	superblockObject.CopyBlockGroupIds = append(superblockObject.CopyBlockGroupIds, 0)
 	for bgroupNum := 0; bgroupNum < superblockObject.NumBlockGroups; bgroupNum++ {
 		bgroupStartBid := bgroupNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId
 		bgdt.BlockBitmapLocation = bgroupStartBid

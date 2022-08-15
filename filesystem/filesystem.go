@@ -111,8 +111,8 @@ func Make(fileName string, blockSize, numBlocks int) error {
 	var groupNum int
 	var bgdtEntry *bgdt.BgdtEntry
 	for groupNum, bgdtEntry = range bgdtObject.Entries {
-		if bgdtObject.NumFreeBlocks > 0 {
-			bitmapStartPos = bgdtObject.BlockBitmapLocation * superblockObject.BlockSize
+		if bgdtEntry.NumFreeBlocks > 0 {
+			bitmapStartPos = bgdtEntry.BlockBitmapLocation * superblockObject.BlockSize
 			break
 		}
 	}
