@@ -2,7 +2,7 @@
 A mkfs.ext2 implementation in Go
 
 ## Usage
-```
+```sh
 # Print all flags
 mkfs.ext2 -help
 
