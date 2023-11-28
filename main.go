@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/ErrorNoInternet/mkfs.ext2/filesystem"
@@ -24,7 +25,21 @@ func main() {
 		if err != nil {
 			blocks = 25600
 		} else {
-			blocks = int(deviceInformation.Size() / int64(blockSize))
+			if deviceInformation.Size() == 0 {
+				device, err := os.Open(devicePath)
+				if err != nil {
+					fmt.Printf("unable to open file: %v\n", err)
+					return
+				}
+				position, err := device.Seek(0, io.SeekEnd)
+				if err != nil {
+					fmt.Printf("unable to seek to end of file: %v\n", err)
+					return
+				}
+				blocks = int(position / int64(blockSize))
+			} else {
+				blocks = int(deviceInformation.Size() / int64(blockSize))
+			}
 		}
 	}
 
