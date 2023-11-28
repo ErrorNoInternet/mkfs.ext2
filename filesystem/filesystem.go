@@ -168,7 +168,7 @@ func Make(file *os.File, blockSize, numBlocks int) error {
 	if err != nil {
 		return err
 	}
-	defaultEntries6 := []byte([]uint8{2, uint8(blockSize - 12)})
+	defaultEntries6 := []byte([]uint8{2, 2})
 	defaultEntries7, err := bp.Pack([]string{"2s"}, []interface{}{".."})
 	if err != nil {
 		return err
@@ -210,7 +210,7 @@ func Make(file *os.File, blockSize, numBlocks int) error {
 		WriteToBlock(filesystemDevice, superblockObject, tableBid, int64(inodeTableOffset+28), data)
 	}
 
-	inodeSize := superblockObject.InodeSize + superblockObject.BlockSize
+	inodeSize := superblockObject.BlockSize
 	data, err = bp.Pack([]string{"I"}, []interface{}{inodeSize & 0xFFFFFFFF})
 	if err != nil {
 		return err
