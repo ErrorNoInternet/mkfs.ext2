@@ -7,7 +7,7 @@ A mkfs.ext2 implementation in Go
 mkfs.ext2 -help
 
 # Create a file with a filesystem
-# (automatically determines blocks, if file.ext2 doesn't exist then it's 100 MB)
+# (automatically determines blocks, if file.ext2 doesn't exist then it's 1 GiB)
 mkfs.ext2 -device file.ext2
 
 # Create a filesystem on a real device (automatically determines blocks)

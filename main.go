@@ -23,7 +23,7 @@ func main() {
 	if blocks == 0 {
 		deviceInformation, err := os.Stat(devicePath)
 		if err != nil {
-			blocks = 25600
+			blocks = 1024 * 256
 		} else {
 			if deviceInformation.Size() == 0 {
 				device, err := os.Open(devicePath)
