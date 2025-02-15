@@ -88,18 +88,18 @@ func (bgdtEntry *BgdtEntry) WriteData(offset int64, data []byte) {
 
 func New(
 	bgNumCopy int,
-	superblockObject *superblock.Superblock,
-	filesystemDevice *device.Device,
+	sb *superblock.Superblock,
+	dev *device.Device,
 ) (*Bgdt, error) {
 	bgdt := &Bgdt{}
 	bgdt.Entries = []*BgdtEntry{}
-	bgdt.StartPos = (bgNumCopy*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId + 1) * superblockObject.BlockSize
-	bgdt.NumBgdtBlocks = int(math.Ceil(float64(superblockObject.NumBlockGroups*32) / float64(superblockObject.BlockSize)))
-	bgdt.InodeTableBlocks = int(math.Ceil(float64(superblockObject.NumInodesPerGroup*superblockObject.InodeSize) / float64(superblockObject.BlockSize)))
+	bgdt.StartPos = (bgNumCopy*sb.NumBlocksPerGroup + sb.FirstBlockId + 1) * sb.BlockSize
+	bgdt.NumBgdtBlocks = int(math.Ceil(float64(sb.NumBlockGroups*32) / float64(sb.BlockSize)))
+	bgdt.InodeTableBlocks = int(math.Ceil(float64(sb.NumInodesPerGroup*sb.InodeSize) / float64(sb.BlockSize)))
 
 	bgdtBytes := []byte("")
-	for bgroupNum := 0; bgroupNum < superblockObject.NumBlockGroups; bgroupNum++ {
-		bgroupStartBid := bgroupNum*superblockObject.NumBlocksPerGroup + superblockObject.FirstBlockId
+	for bgroupNum := 0; bgroupNum < sb.NumBlockGroups; bgroupNum++ {
+		bgroupStartBid := bgroupNum*sb.NumBlocksPerGroup + sb.FirstBlockId
 		bgdt.BlockBitmapLocation = bgroupStartBid
 		bgdt.InodeBitmapLocation = bgroupStartBid + 1
 		bgdt.InodeTableLocation = bgroupStartBid + 2
@@ -107,7 +107,7 @@ func New(
 
 		bgdt.NumUsedBlocks = 2 + bgdt.InodeTableBlocks
 		in := false
-		for _, groupId := range superblockObject.CopyBlockGroupIds {
+		for _, groupId := range sb.CopyBlockGroupIds {
 			if bgroupNum == groupId {
 				in = true
 			}
@@ -121,14 +121,14 @@ func New(
 
 		bgdt.NumUsedInodes = 0
 		if bgroupNum == 0 {
-			bgdt.NumUsedInodes += (superblockObject.FirstInodeIndex - 1)
+			bgdt.NumUsedInodes += (sb.FirstInodeIndex - 1)
 		}
-		bgdt.NumFreeInodes = superblockObject.NumInodesPerGroup - bgdt.NumUsedInodes
+		bgdt.NumFreeInodes = sb.NumInodesPerGroup - bgdt.NumUsedInodes
 
-		if bgroupNum != superblockObject.NumBlockGroups-1 {
-			bgdt.NumTotalBlocksInGroup = superblockObject.NumBlocksPerGroup
+		if bgroupNum != sb.NumBlockGroups-1 {
+			bgdt.NumTotalBlocksInGroup = sb.NumBlocksPerGroup
 		} else {
-			bgdt.NumTotalBlocksInGroup = superblockObject.NumBlocks - bgroupStartBid
+			bgdt.NumTotalBlocksInGroup = sb.NumBlocks - bgroupStartBid
 		}
 		bgdt.NumFreeBlocks = bgdt.NumTotalBlocksInGroup - bgdt.NumUsedBlocks
 
@@ -138,7 +138,7 @@ func New(
 
 		if bgNumCopy == 0 {
 			blockBitmap := []uint8{}
-			for i := 0; i < superblockObject.BlockSize; i++ {
+			for i := 0; i < sb.BlockSize; i++ {
 				blockBitmap = append(blockBitmap, 0)
 			}
 			bitmapIndex := 0
@@ -150,17 +150,17 @@ func New(
 				}
 			}
 			padBitIndex := bgdt.NumTotalBlocksInGroup
-			for padBitIndex < superblockObject.BlockSize {
+			for padBitIndex < sb.BlockSize {
 				blockBitmap[padBitIndex>>8] |= (1 << (padBitIndex & 0x07))
 				padBitIndex += 1
 			}
-			filesystemDevice.Write(
-				int64(bgdt.BlockBitmapLocation*superblockObject.BlockSize),
+			dev.Write(
+				int64(bgdt.BlockBitmapLocation*sb.BlockSize),
 				[]byte(blockBitmap),
 			)
 
 			inodeBitmap := []uint8{}
-			for i := 0; i < superblockObject.BlockSize; i++ {
+			for i := 0; i < sb.BlockSize; i++ {
 				inodeBitmap = append(inodeBitmap, 0)
 			}
 			bitmapIndex = 0
@@ -171,8 +171,8 @@ func New(
 					bitmapIndex += 1
 				}
 			}
-			filesystemDevice.Write(
-				int64(bgdt.InodeBitmapLocation*superblockObject.BlockSize),
+			dev.Write(
+				int64(bgdt.InodeBitmapLocation*sb.BlockSize),
 				[]byte(inodeBitmap),
 			)
 		}
@@ -200,8 +200,8 @@ func New(
 		startPos := bgroupNum * 32
 		entry := &BgdtEntry{
 			StartPos:            startPos,
-			Device:              filesystemDevice,
-			Superblock:          superblockObject,
+			Device:              dev,
+			Superblock:          sb,
 			BlockBitmapLocation: bgdt.BlockBitmapLocation,
 			InodeBitmapLocation: bgdt.InodeBitmapLocation,
 			InodeTableLocation:  bgdt.InodeTableLocation,
@@ -211,7 +211,7 @@ func New(
 		entry.SetNumInodesAsDirs(bgdt.NumInodesAsDirs)
 		bgdt.Entries = append(bgdt.Entries, entry)
 	}
-	filesystemDevice.Write(int64(bgdt.StartPos), bgdtBytes)
+	dev.Write(int64(bgdt.StartPos), bgdtBytes)
 
 	return bgdt, nil
 }
